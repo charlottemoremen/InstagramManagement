@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">UsageManagement</string>
+    <string name="accessibility_service_description">Service for blocking apps</string>
+
+</resources>
