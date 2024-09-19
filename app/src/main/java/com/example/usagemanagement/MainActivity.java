@@ -107,6 +107,7 @@ public class MainActivity extends AppCompatActivity {
 
             if (stats != null) {
                 long instagramUsageTime = 0;
+                //set to recalc every 3 min
                 for (UsageStats stat : stats) {
                     if (INSTAGRAM_PACKAGE_NAME.equals(stat.getPackageName())) {
                         instagramUsageTime += stat.getTotalTimeInForeground();
