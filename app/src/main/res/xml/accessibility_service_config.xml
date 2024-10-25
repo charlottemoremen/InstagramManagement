@@ -1,6 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
 <accessibility-service
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeWindowStateChanged|typeViewTextChanged"
-    android:accessibilityFeedbackType="feedbackSpoken"
+    android:accessibilityEventTypes="typeAllMask"
+    android:packageNames="com.instagram.android"
+    android:accessibilityFeedbackType="feedbackGeneric"
     android:notificationTimeout="100"
-    android:accessibilityFlags="flagDefault"/>
+    android:canRetrieveWindowContent="true"
+    android:accessibilityFlags="flagDefault"
+    android:settingsActivity="com.example.usagemanagement.MyAccessibilityService" />
