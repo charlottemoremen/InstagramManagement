@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">UsageManagement</string>
-    <string name="accessibility_service_description">Service for blocking apps</string>
-
+    <string name="app_name">Usage Management</string>
+    <string name="accessibility_service_label">Usage Management Accessibility Service</string>
+    <string name="accessibility_service_description">This service tracks Instagram usage for daily management.</string>
 </resources>

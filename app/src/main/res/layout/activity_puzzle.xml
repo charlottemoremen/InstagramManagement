@@ -1,0 +1,30 @@
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/instructionTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Memorize the blue tiles!"
+        android:textSize="18sp"
+        android:paddingBottom="16dp"/>
+
+    <GridLayout
+        android:id="@+id/gridLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:columnCount="5"
+        android:rowCount="5"
+        android:padding="2dp"
+        android:layout_gravity="center">
+
+        <!-- Add 25 Buttons for 5x5 grid -->
+        <!-- Buttons should have ids tile0 to tile24 -->
+        <!-- We'll generate these dynamically in the PuzzleActivity -->
+    </GridLayout>
+</LinearLayout>

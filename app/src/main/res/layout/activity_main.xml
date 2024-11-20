@@ -2,55 +2,16 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center"
     android:orientation="vertical"
-    android:padding="16dp"
-    android:background="#ffffff">
-
-    <!-- Header TextView -->
-    <TextView
-        android:id="@+id/headerTextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Instagram Usage Tracker"
-        android:textSize="22sp"
-        android:textColor="#000000"
-        android:gravity="center"
-        android:layout_marginBottom="24dp"
-        android:fontFamily="sans-serif-medium" />
-
-    <!-- Instagram Usage Display TextView -->
-    <TextView
-        android:id="@+id/usageTextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Instagram usage: INITIALIZING"
-        android:textSize="20sp"
-        android:textColor="#000000"
-        android:gravity="center"
-        android:fontFamily="sans-serif"
-        android:layout_marginBottom="24dp" />
+    android:padding="16dp">
 
     <TextView
-        android:id="@+id/limitTextView"
+        android:id="@+id/statusTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="18sp"
-        android:textColor="#FF0000"
-        android:text="You've used all your Instagram time for today. See you tomorrow!"
-        android:gravity="center"
-        android:fontFamily="sans-serif-medium" />
-
-    <!-- Instructions to users -->
-    <TextView
-        android:id="@+id/instructionTextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Make sure to grant Accessibility permission to track Instagram usage."
+        android:text="Instagram usage: calibrating..."
         android:textSize="16sp"
-        android:textColor="#555555"
-        android:gravity="center"
-        android:padding="8dp"
-        android:fontFamily="sans-serif-light" />
+        android:layout_gravity="center_horizontal"
+        />
 
 </LinearLayout>

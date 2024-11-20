@@ -10,115 +10,104 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-public class MainActivity extends AppCompatActivity {
+import java.util.concurrent.TimeUnit;
 
-    private static final String TAG = "UsageLog";
-    private TextView usageTextView;
-    private TextView instructionTextView;
-    private TextView limitTextView;
-    private Handler handler = new Handler();
-    private Runnable usageUpdaterRunnable;
+public class MainActivity extends AppCompatActivity
+        implements MyAccessibilityService.AccessibilityServiceConnectionListener {
+
+    private static final String TAG = "MainActivity";
+    private TextView statusTextView;
+    private Handler handler;
+    private InstagramUsageTracker tracker;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        usageTextView = findViewById(R.id.usageTextView);
-        instructionTextView = findViewById(R.id.instructionTextView);
-        limitTextView = findViewById(R.id.limitTextView);
+        statusTextView = findViewById(R.id.statusTextView);
+        if (statusTextView == null) {
+            Log.e("MainActivity", "statusTextView is null. Check your layout XML.");
+            return; // Prevent further execution if the TextView is not found
+        }
+        handler = new Handler();
 
-        if (!Settings.canDrawOverlays(this)) {
-            requestOverlayPermission();
+        // Set the listener for AccessibilityService connection
+        MyAccessibilityService.setAccessibilityServiceConnectionListener(this);
+
+        // Check and handle accessibility on start
+        checkAndHandleAccessibility();
+
+        tracker = new InstagramUsageTracker(this);
+
+        tracker.setInstagramUsageListener(estimatedTime -> runOnUiThread(() -> {
+            TextView statusTextView = findViewById(R.id.statusTextView);
+            long minutes = TimeUnit.MILLISECONDS.toMinutes(estimatedTime);
+            long seconds = TimeUnit.MILLISECONDS.toSeconds(estimatedTime) % 60;
+            statusTextView.setText(String.format("Instagram usage: %d min %d sec", minutes, seconds));
+        }));
+
+        tracker.startTracking();
+    }
+
+    private void checkAndHandleAccessibility() {
+        if (MyAccessibilityService.getInstance() != null) {
+            Log.i(TAG, "Accessibility already enabled.");
+            onAccessibilityServiceConnected();
         } else {
-            initializeTracking();
+            Log.i(TAG, "Accessibility not enabled. Prompting user.");
+            statusTextView.setText("Please enable accessibility access.");
+            openAccessibilitySettings();
         }
     }
 
-    private void requestOverlayPermission() {
-        Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
-        startActivity(intent);
-        Log.i(TAG, "Requesting SYSTEM_ALERT_WINDOW permission.");
-    }
-
-    private void initializeTracking() {
-        if (!isAccessibilityServiceEnabled(this, MyAccessibilityService.class)) {
-            promptUserToEnableAccessibilityService();
-            instructionTextView.setText("Please enable accessibility access to track Instagram usage.");
-        } else {
-            startUsageUpdater();
-            displayInstagramUsageTime(MyAccessibilityService.getRealInstagramUsageTime(this));
-        }
-    }
-
-    private boolean isAccessibilityServiceEnabled(Context context, Class<? extends android.accessibilityservice.AccessibilityService> service) {
-        String serviceId = getPackageName() + "/" + service.getName();
-        String enabledServices = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
-        return enabledServices != null && enabledServices.contains(serviceId);
-    }
-
-    private void promptUserToEnableAccessibilityService() {
+    private void openAccessibilitySettings() {
         Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
-        Log.w(TAG, "Please enable the accessibility service for full functionality.");
-    }
 
-    private void startUsageUpdater() {
-        fetchAndDisplayInstagramUsageTime();
-
-        usageUpdaterRunnable = new Runnable() {
+        // Periodically check if accessibility service is enabled
+        handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                fetchAndDisplayInstagramUsageTime();
-                handler.postDelayed(this, 30000);
-            }
-        };
-        handler.post(usageUpdaterRunnable);
-    }
-
-    private void fetchAndDisplayInstagramUsageTime() {
-        MyAccessibilityService service = MyAccessibilityService.getServiceInstance();
-        if (service != null) {
-            long realInstagramUsageTime = service.getRealInstagramUsageTime(this);
-
-            runOnUiThread(() -> {
-                if (realInstagramUsageTime > 0) {
-                    displayInstagramUsageTime(realInstagramUsageTime);
+                if (MyAccessibilityService.getInstance() != null) {
+                    Log.i(TAG, "Accessibility enabled.");
+                    onAccessibilityServiceConnected();
                 } else {
-                    usageTextView.setText("No Instagram usage tracked yet.");
+                    Log.i(TAG, "Waiting for accessibility to be enabled...");
+                    handler.postDelayed(this, 1000); // Check every second
                 }
-            });
-        } else {
-            Log.w(TAG, "MyAccessibilityService instance is null.");
-        }
-    }
-
-    private void displayInstagramUsageTime(long instagramUsageTime) {
-        long hours = instagramUsageTime / (1000 * 60 * 60);
-        long minutes = (instagramUsageTime % (1000 * 60 * 60)) / (1000 * 60);
-        long seconds = (instagramUsageTime % (1000 * 60)) / 1000;
-
-        String usageText = "Instagram usage today: " + hours + " hours " + minutes + " minutes " + seconds + " seconds";
-        usageTextView.setText(usageText);
-
-        if (instagramUsageTime >= MyAccessibilityService.REDIRECT_LIMIT) {
-            limitTextView.setText("You've used all your Instagram time for today. See you tomorrow!");
-        } else {
-            limitTextView.setText("");
-        }
+            }
+        }, 1000);
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        if (Settings.canDrawOverlays(this)) {
-            initializeTracking();
-        }
+    public void onAccessibilityServiceConnected() {
+        Log.i(TAG, "Accessibility service connection detected in MainActivity.");
+        statusTextView.setText("Tracking Instagram usage...");
+        startTrackingInstagramUsage();
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        handler.removeCallbacks(usageUpdaterRunnable);
+    private void startTrackingInstagramUsage() {
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                updateInstagramUsage(); // Call method with no parameters
+                handler.postDelayed(this, 5000); // Update every 5 seconds
+            }
+        }, 0);
+    }
+
+    private void updateInstagramUsage() {
+        if (statusTextView == null) {
+            Log.e("MainActivity", "Cannot update Instagram usage. statusTextView is null.");
+            return;
+        }
+
+        long usageTime = tracker.getInstagramUsageToday();
+
+        long minutes = TimeUnit.MILLISECONDS.toMinutes(usageTime);
+        long seconds = TimeUnit.MILLISECONDS.toSeconds(usageTime) % 60;
+        statusTextView.setText(String.format("Instagram usage: %d min %d sec", minutes, seconds));
     }
 }
