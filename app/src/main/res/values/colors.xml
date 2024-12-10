@@ -11,4 +11,10 @@
     <color name="colorOnSurface">#000000</color>
     <color name="colorError">#B00020</color>
     <color name="colorOnError">#FFFFFF</color>
+
+    <!-- MyPalette -->
+    <color name="primary_pink">#FFD8E4</color>
+    <color name="accent_maroon">#B47A8D</color>
+    <color name="deep_maroon">#633B48</color>
+    <color name="pure_white">#FFFFFF</color>
 </resources>

@@ -2,16 +2,92 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:gravity="center_horizontal"
+    android:orientation="vertical">
 
+    <!-- Top Spacer -->
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="50dp" />
+
+    <!-- Welcome Header -->
     <TextView
-        android:id="@+id/statusTextView"
+        android:id="@+id/welcomeText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Instagram usage: calibrating..."
-        android:textSize="16sp"
-        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="8dp"
+        android:fontFamily="@font/inter"
+        android:text="Welcome to"
+        android:textColor="#633B48"
+        android:textSize="20sp" />
+
+    <!-- App Name -->
+    <TextView
+        android:id="@+id/appNameText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:fontFamily="@font/abrilfatface"
+        android:text="Screen Saver"
+        android:textColor="#633B48"
+        android:textSize="32sp" />
+
+    <TextView
+        android:id="@+id/usageTitleText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="today's Instagram time:"
+        android:textSize="18sp"
+        android:textColor="@color/deep_maroon"
+        android:fontFamily="@font/inter"
+        android:layout_marginBottom="4dp" />
+
+    <!-- Usage Text -->
+    <TextView
+        android:id="@+id/IGTrackingText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:fontFamily="@font/inter"
+        android:text="Today's Instagram Usage: 0 min 0 sec"
+        android:textColor="#633B48"
+        android:textSize="16sp" />
+
+    <!-- Puzzle Button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/puzzleButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginBottom="16dp"
+        android:padding="16dp"
+        style="@style/RoundedButtonStyle"
+        android:text="Puzzle"
         />
 
+    <!-- Greyscale Button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/grayscaleButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:padding="16dp"
+        style="@style/RoundedButtonStyle"
+        android:text="Greyscale" />
+
+    <!-- Dynamic Spacer -->
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- Image -->
+    <ImageView
+        android:id="@+id/displayImage"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:layout_marginBottom="100dp"
+        android:scaleType="fitXY"
+        android:src="@drawable/stripe" />
 </LinearLayout>

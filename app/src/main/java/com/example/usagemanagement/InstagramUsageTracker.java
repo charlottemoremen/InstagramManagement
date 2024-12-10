@@ -13,8 +13,8 @@ public class InstagramUsageTracker {
 
     private static final String TAG = "InstagramUsageTracker";
     private static final String INSTAGRAM_PACKAGE_NAME = "com.instagram.android";
-    private static final long CHECK_INTERVAL_MS = 5000; // Check every 5 seconds
-    private static final long TIMEKEEPING_ERROR_THRESHOLD_MS = 15000; // 15 seconds
+    private static final long CHECK_INTERVAL_MS = 500; // Check every half second
+    private static final long TIMEKEEPING_ERROR_THRESHOLD_MS = 5000; // 5 seconds
 
     private final Context context;
     private final Handler handler;
@@ -41,30 +41,56 @@ public class InstagramUsageTracker {
         handler.postDelayed(this::trackInstagramUsage, CHECK_INTERVAL_MS);
     }
 
+    private boolean hasInstagramUsageChanged(long currentUsageStatsTime) {
+        boolean hasChanged = currentUsageStatsTime > lastIGUsageStats;
+        Log.d(TAG, "Has Instagram usage changed: " + hasChanged);
+        return hasChanged;
+    }
+
     private void trackInstagramUsage() {
         long currentUsageStatsTime = getInstagramUsageToday();
-        boolean isCurrentlyOpen = isInstagramCurrentlyOpen();
+        MyAccessibilityService service = MyAccessibilityService.getInstance();
 
-        if (isCurrentlyOpen) {
-            if (!isInstagramActive) {
-                // Start a new session
-                IGSessionStartTime = System.currentTimeMillis();
-                isInstagramActive = true;
-                Log.d(TAG, "Instagram session started at: " + IGSessionStartTime);
-            }
-            // Update session time
-            updateSessionTime();
-        } else if (isInstagramActive) {
-            // Instagram was active but is now closed
-            logSessionDuration();
-            validateAndResetTracking(currentUsageStatsTime);
+        Log.d(TAG, "Checking Instagram usage...");
+        Log.d(TAG, "Current UsageStats time: " + currentUsageStatsTime);
+        Log.d(TAG, "Last recorded UsageStats time: " + lastIGUsageStats);
+        Log.d(TAG, "Is Instagram active: " + isInstagramActive);
+
+        // Detect Instagram open using AccessibilityService
+        if (!isInstagramActive && service != null && service.isAppCurrentlyActive(INSTAGRAM_PACKAGE_NAME)) {
+            isInstagramActive = true;
+            IGSessionStartTime = System.currentTimeMillis();
+            Log.d(TAG, "Instagram detected as open at: " + IGSessionStartTime);
         }
 
-        // Always notify listener with the current `UsageStats` value
+        // Detect Instagram close using UsageStats
+        if (isInstagramActive && hasInstagramUsageChanged(currentUsageStatsTime)) {
+            isInstagramActive = false;
+            logSessionDuration();
+            resetSessionTracking();
+
+            // Remove grayscale overlay
+            if (service != null) {
+                Log.d(TAG, "Removing grayscale overlay.");
+                service.removeGrayscaleOverlay();
+            }
+        } else if (!isInstagramActive && service != null && !service.isAppCurrentlyActive(INSTAGRAM_PACKAGE_NAME)) {
+            // Ensure grayscale is removed if no Instagram activity
+            if (service.isGrayscaleEnabled) {
+                Log.d(TAG, "Forcing grayscale removal as Instagram is inactive.");
+                service.removeGrayscaleOverlay();
+            }
+        }
+
+        // Notify listener for UI updates
         notifyInstagramUsage(currentUsageStatsTime);
+        lastIGUsageStats = currentUsageStatsTime;
 
         handler.postDelayed(this::trackInstagramUsage, CHECK_INTERVAL_MS);
     }
+
+
+
 
     private void updateSessionTime() {
         long currentTime = System.currentTimeMillis();
@@ -123,7 +149,10 @@ public class InstagramUsageTracker {
 
     public long getInstagramUsageToday() {
         UsageStatsManager usageStatsManager = (UsageStatsManager) context.getSystemService(Context.USAGE_STATS_SERVICE);
-        if (usageStatsManager == null) return 0;
+        if (usageStatsManager == null) {
+            Log.w(TAG, "UsageStatsManager is null.");
+            return 0;
+        }
 
         Calendar calendar = Calendar.getInstance();
         long endTime = calendar.getTimeInMillis();
@@ -143,12 +172,12 @@ public class InstagramUsageTracker {
 
         for (UsageStats stats : usageStatsList) {
             if (INSTAGRAM_PACKAGE_NAME.equals(stats.getPackageName())) {
+                Log.d(TAG, "Instagram total foreground time: " + stats.getTotalTimeInForeground());
                 return stats.getTotalTimeInForeground();
             }
         }
         return 0;
     }
-
     public interface InstagramUsageListener {
         void onInstagramUsageUpdated(long estimatedUsageTime);
     }

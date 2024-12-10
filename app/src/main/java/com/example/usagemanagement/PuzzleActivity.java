@@ -1,15 +1,13 @@
 package com.example.usagemanagement;
 
-import android.content.Context;
-import android.content.Intent;
-import android.graphics.Color;
 import android.os.Bundle;
-import android.os.Handler;
-import android.view.View;
+import android.util.DisplayMetrics;
 import android.widget.Button;
 import android.widget.GridLayout;
 import android.widget.TextView;
+
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -17,91 +15,158 @@ import java.util.List;
 
 public class PuzzleActivity extends AppCompatActivity {
 
-    private static final int GRID_SIZE = 5;
-    private static final int BLUE_TILE_COUNT = 7;
-    private static final int SHOW_TIME_MS = 5000;
+    private GridLayout puzzleGrid;
+    private Button backButton;
+    private TextView instructionsText;
 
-    private List<Button> tileButtons = new ArrayList<>();
-    private List<Integer> blueTileIndices = new ArrayList<>();
-    private Handler handler = new Handler();
-    private TextView instructionTextView;
-    private boolean isSelectionPhase = false;
+    private final int GRID_SIZE = 5; // 5x5 grid
+    private final int TILE_COUNT = GRID_SIZE * GRID_SIZE;
+    private final int MIN_SHOW_TIME_MS = 1000; // Minimum show time for correct tiles
+    private final int TOTAL_TILES_TO_SELECT = 7; // Number of correct tiles
+    private float showTimeMs = 3000; // Initial show time for correct pattern
+
+    private List<Button> gridTiles = new ArrayList<>();
+    private List<Integer> correctTiles = new ArrayList<>();
+    private List<Integer> remainingTilesToSelect = new ArrayList<>(); // Track tiles left to select
+    private boolean gameInProgress = false;
+    private boolean showingPattern = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_puzzle);
 
-        instructionTextView = findViewById(R.id.instructionTextView);
-       // GridLayout gridLayout = findViewById(R.id.gridLayout); //********************************
+        puzzleGrid = findViewById(R.id.puzzleGrid);
+        backButton = findViewById(R.id.backButton);
+        instructionsText = findViewById(R.id.instructionsText);
 
-        // Create 5x5 grid of tiles (buttons)
-        for (int i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
-            Button tileButton = new Button(this);
+        setupPuzzleGrid();
+        startPuzzleGame();
+
+        // Back to MainActivity
+        backButton.setOnClickListener(v -> finish());
+    }
+
+    private void setupPuzzleGrid() {
+        puzzleGrid.removeAllViews();
+        gridTiles.clear();
+
+        // Screen dimensions
+        DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
+        int screenWidth = displayMetrics.widthPixels;
+
+        // Tile size calculation
+        int tileSize = (screenWidth / GRID_SIZE) - 20; // Subtract padding
+
+        // Set GridLayout parameters
+        puzzleGrid.setColumnCount(GRID_SIZE);
+        puzzleGrid.setRowCount(GRID_SIZE);
+
+        // Create tiles dynamically
+        for (int i = 0; i < TILE_COUNT; i++) {
+            Button tile = new Button(this);
+            tile.setBackgroundColor(ContextCompat.getColor(this, R.color.primary_pink)); // Default tile color
+
             GridLayout.LayoutParams params = new GridLayout.LayoutParams();
-           // params.setMargins(4, 4, 4, 4); // Add spacing between buttons
-            tileButton.setLayoutParams(params);
-            tileButton.setId(View.generateViewId());
-            tileButton.setOnClickListener(this::onTileClick);
-            tileButtons.add(tileButton);
-          //  gridLayout.addView(tileButton); //********************************
+            params.width = tileSize;
+            params.height = tileSize;
+            params.setMargins(5, 5, 5, 5); // Uniform margin
+            tile.setLayoutParams(params);
+
+            int finalI = i;
+            tile.setOnClickListener(v -> onTileClicked(finalI));
+
+            puzzleGrid.addView(tile);
+            gridTiles.add(tile);
         }
-
-
-        // Randomly pick blue tiles and start game
-        initializeGame();
     }
 
-    private void initializeGame() {
-        isSelectionPhase = false;
-        instructionTextView.setText("Memorize the blue tiles!");
+    private void startPuzzleGame() {
+        if (gameInProgress) return;
 
-        // Randomly select 7 unique tiles
-        List<Integer> allIndices = new ArrayList<>();
-        for (int i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
-            allIndices.add(i);
+        instructionsText.setText("Remember these tiles!");
+        resetTilesToDefault();
+
+        // Generate new correct pattern
+        correctTiles.clear();
+        List<Integer> allTiles = new ArrayList<>();
+        for (int i = 0; i < TILE_COUNT; i++) {
+            allTiles.add(i);
         }
-        Collections.shuffle(allIndices);
-        blueTileIndices = allIndices.subList(0, BLUE_TILE_COUNT);
+        Collections.shuffle(allTiles);
+        correctTiles.addAll(allTiles.subList(0, TOTAL_TILES_TO_SELECT)); // Select 7 tiles
 
-        // Set selected tiles to blue
-        for (int index : blueTileIndices) {
-            tileButtons.get(index).setBackgroundColor(Color.BLUE);
-        }
+        // Initialize remaining tiles to select
+        remainingTilesToSelect = new ArrayList<>(correctTiles);
 
-        // After SHOW_TIME_MS, reset tiles to white
-        handler.postDelayed(this::hideBlueTiles, SHOW_TIME_MS);
+        // Highlight correct tiles
+        highlightCorrectTiles();
+
+        new android.os.Handler().postDelayed(() -> {
+            resetTilesToDefault();
+            instructionsText.setText("Select the correct tiles!");
+            gameInProgress = true;
+        }, (long) showTimeMs);
     }
 
-    private void hideBlueTiles() {
-        // Turn all tiles back to white
-        for (Button tile : tileButtons) {
-            tile.setBackgroundColor(Color.WHITE);
-        }
-        isSelectionPhase = true;
-        instructionTextView.setText("Tap the tiles that were blue!");
-    }
+    private void onTileClicked(int tileIndex) {
+        if (!gameInProgress || showingPattern) return;
 
-    private void onTileClick(View view) {
-        if (!isSelectionPhase) return; // Ignore clicks if not in selection phase
+        Button clickedTile = gridTiles.get(tileIndex);
 
-        Button clickedButton = (Button) view;
-        int clickedIndex = tileButtons.indexOf(clickedButton);
+        if (remainingTilesToSelect.contains(tileIndex)) {
+            // Correct tile
+            clickedTile.setBackgroundColor(ContextCompat.getColor(this, R.color.accent_maroon));
+            remainingTilesToSelect.remove((Integer) tileIndex);
 
-        // Mark the tile as selected (toggle color for visual feedback)
-        if (blueTileIndices.contains(clickedIndex)) {
-            clickedButton.setBackgroundColor(Color.GREEN); // Correct tile
-            blueTileIndices.remove(Integer.valueOf(clickedIndex)); // Remove from blue list
+            if (remainingTilesToSelect.isEmpty()) {
+                // All tiles correct
+                instructionsText.setText("You got it!");
+                gameInProgress = false;
+                showTimeMs = 3000; // Reset show time for new game
+            }
         } else {
-            clickedButton.setBackgroundColor(Color.RED); // Incorrect tile
-        }
+            // Incorrect tile
+            instructionsText.setText("Oops! Try again!");
+            clickedTile.setBackgroundColor(ContextCompat.getColor(this, R.color.deep_maroon));
 
-        // Check if game is complete
-        if (blueTileIndices.isEmpty()) {
-            instructionTextView.setText("You found all the blue tiles!");
-            isSelectionPhase = false; // Stop further interactions
+            new android.os.Handler().postDelayed(() -> {
+                resetTilesToDefault();
+                reShowCorrectTiles();
+            }, 2000); // Highlight incorrect tile for 2 seconds
         }
     }
 
+    private void highlightCorrectTiles() {
+        for (int index : correctTiles) {
+            gridTiles.get(index).setBackgroundColor(ContextCompat.getColor(this, R.color.accent_maroon));
+        }
+    }
 
+    private void resetTilesToDefault() {
+        for (Button tile : gridTiles) {
+            tile.setBackgroundColor(ContextCompat.getColor(this, R.color.primary_pink));
+        }
+    }
+
+    private void reShowCorrectTiles() {
+        instructionsText.setText("Remember these tiles!");
+        showingPattern = true;
+
+        // Reset remaining tiles to select
+        remainingTilesToSelect = new ArrayList<>(correctTiles);
+
+        // Highlight correct tiles
+        highlightCorrectTiles();
+
+        // Reduce show time for subsequent attempts
+        showTimeMs = Math.max(showTimeMs - 500, MIN_SHOW_TIME_MS);
+
+        new android.os.Handler().postDelayed(() -> {
+            resetTilesToDefault();
+            instructionsText.setText("Select the correct tiles!");
+            gameInProgress = true;
+            showingPattern = false;
+        }, (long) showTimeMs);
+    }
 }

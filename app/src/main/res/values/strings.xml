@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Usage Management</string>
-    <string name="accessibility_service_label">Usage Management Accessibility Service</string>
-    <string name="accessibility_service_description">This service tracks Instagram usage for daily management.</string>
+    <string name="app_name">Screen Saver</string>
+    <string name="accessibility_service_label">Screen Saver Accessibility Service</string>
+    <string name="accessibility_service_description">This service tracks your daily Instagram usage for research purposes.</string>
 </resources>

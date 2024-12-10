@@ -1,23 +1,23 @@
 package com.example.usagemanagement;
 
 import android.accessibilityservice.AccessibilityService;
-import android.app.usage.UsageStats;
-import android.app.usage.UsageStatsManager;
-import android.content.Context;
+import android.graphics.PixelFormat;
 import android.util.Log;
+import android.view.View;
+import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
-
-import java.util.List;
 
 public class MyAccessibilityService extends AccessibilityService {
 
     private static final String TAG = "MyAccessibilityService";
+    private static final String INSTAGRAM_PACKAGE_NAME = "com.instagram.android";
     private static MyAccessibilityService instance;
     private static AccessibilityServiceConnectionListener listener;
+
     private String currentActivePackageName = null;
-    private static final long RECENT_ACTIVITY_THRESHOLD = 5000; // 5 seconds
-    private long lastInstagramActiveTime = 0;
-    private static final String INSTAGRAM_PACKAGE_NAME = "com.instagram.android";
+    public boolean isGrayscaleEnabled = false;
+    private View grayscaleOverlayView;
+    private boolean isOverlayApplied = false;
 
     @Override
     public void onCreate() {
@@ -35,27 +35,67 @@ public class MyAccessibilityService extends AccessibilityService {
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        if (event != null && event.getPackageName() != null) {
-            String currentPackageName = event.getPackageName().toString();
+        if (event == null || event.getPackageName() == null) return;
 
-            // Update the current active package
-            currentActivePackageName = currentPackageName;
+        String packageName = event.getPackageName().toString();
+        currentActivePackageName = packageName;
 
-            if (INSTAGRAM_PACKAGE_NAME.equals(currentPackageName)) {
-                lastInstagramActiveTime = System.currentTimeMillis();
-            }
+        // Log current active package for debugging
+        Log.d(TAG, "Current active package: " + currentActivePackageName);
 
-            Log.d(TAG, "Current active package: " + currentPackageName);
+        if (INSTAGRAM_PACKAGE_NAME.equals(packageName) && isGrayscaleEnabled && !isOverlayApplied) {
+            applyGrayscaleOverlay();
         }
     }
 
-    @Override
-    public void onInterrupt() {
-        Log.w(TAG, "Accessibility service interrupted.");
+    public void setGrayscaleEnabled(boolean enabled) {
+        isGrayscaleEnabled = enabled;
+        if (!enabled) {
+            removeGrayscaleOverlay();
+        }
     }
 
     public boolean isAppCurrentlyActive(String packageName) {
         return packageName.equals(currentActivePackageName);
+    }
+
+    private void applyGrayscaleOverlay() {
+        if (!isOverlayApplied) {
+            grayscaleOverlayView = new View(this);
+            grayscaleOverlayView.setBackgroundColor(0x998A8FA0); // Semi-transparent grey
+
+            WindowManager.LayoutParams params = new WindowManager.LayoutParams(
+                    WindowManager.LayoutParams.MATCH_PARENT,
+                    WindowManager.LayoutParams.MATCH_PARENT,
+                    WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+                    PixelFormat.TRANSLUCENT
+            );
+
+            WindowManager windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+            windowManager.addView(grayscaleOverlayView, params);
+            isOverlayApplied = true;
+
+            Log.d(TAG, "Grayscale overlay applied.");
+        }
+    }
+
+    public void removeGrayscaleOverlay() {
+        if (isOverlayApplied && grayscaleOverlayView != null) {
+            WindowManager windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
+            windowManager.removeView(grayscaleOverlayView);
+            grayscaleOverlayView = null;
+            isOverlayApplied = false;
+
+            Log.d(TAG, "Grayscale overlay removed.");
+        }
+    }
+
+
+
+    @Override
+    public void onInterrupt() {
+        Log.w(TAG, "Accessibility service interrupted.");
     }
 
     @Override
@@ -63,13 +103,11 @@ public class MyAccessibilityService extends AccessibilityService {
         super.onServiceConnected();
         Log.i(TAG, "Accessibility Service Connected.");
 
-        // Notify the listener (MainActivity)
         if (listener != null) {
             listener.onAccessibilityServiceConnected();
         }
     }
 
-    // Ensure the interface is public so it can be implemented in MainActivity
     public interface AccessibilityServiceConnectionListener {
         void onAccessibilityServiceConnected();
     }
