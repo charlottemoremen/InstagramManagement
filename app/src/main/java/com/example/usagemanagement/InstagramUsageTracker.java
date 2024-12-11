@@ -89,9 +89,6 @@ public class InstagramUsageTracker {
         handler.postDelayed(this::trackInstagramUsage, CHECK_INTERVAL_MS);
     }
 
-
-
-
     private void updateSessionTime() {
         long currentTime = System.currentTimeMillis();
         sessionTime = currentTime - IGSessionStartTime;

@@ -11,6 +11,7 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import java.util.concurrent.TimeUnit;
 
@@ -43,15 +44,16 @@ public class MainActivity extends AppCompatActivity
         }
 
         // Set button background colors
-        grayscaleButton.setBackgroundColor(Color.parseColor("#FFD8E4"));
-        puzzleButton.setBackgroundColor(Color.parseColor("#FFD8E4"));
+        grayscaleButton.setBackgroundColor(ContextCompat.getColor(this, R.color.primary_pink));
+        puzzleButton.setBackgroundColor(ContextCompat.getColor(this, R.color.primary_pink));
+
 
         handler = new Handler();
 
         // Greyscale button functionality
         grayscaleButton.setOnClickListener(v -> {
             isGrayscaleEnabled = !isGrayscaleEnabled;
-            grayscaleButton.setBackgroundColor(isGrayscaleEnabled ? Color.parseColor("#90EE90") : Color.parseColor("#FFD8E4"));
+            grayscaleButton.setBackgroundColor(isGrayscaleEnabled ? Color.parseColor("#90EE90") : ContextCompat.getColor(this, R.color.primary_pink));
             MyAccessibilityService service = MyAccessibilityService.getInstance();
             if (service != null) {
                 service.setGrayscaleEnabled(isGrayscaleEnabled);
@@ -73,11 +75,23 @@ public class MainActivity extends AppCompatActivity
         // Update Instagram usage time
         tracker.setInstagramUsageListener(estimatedTime -> runOnUiThread(() -> {
             if (statusTextView != null) {
-                long minutes = TimeUnit.MILLISECONDS.toMinutes(estimatedTime);
+                long hours = TimeUnit.MILLISECONDS.toHours(estimatedTime);
+                long minutes = TimeUnit.MILLISECONDS.toMinutes(estimatedTime) % 60;
                 long seconds = TimeUnit.MILLISECONDS.toSeconds(estimatedTime) % 60;
-                statusTextView.setText(String.format("%d min %d sec", minutes, seconds));
+
+                StringBuilder timeBuilder = new StringBuilder();
+                if (hours > 0) {
+                    timeBuilder.append(String.format("%d hr ", hours));
+                }
+                if (minutes > 0 || hours > 0) { // Display minutes if there are hours
+                    timeBuilder.append(String.format("%d min ", minutes));
+                }
+                timeBuilder.append(String.format("%d sec", seconds)); // Always show seconds
+
+                statusTextView.setText(timeBuilder.toString().trim());
             }
         }));
+
 
         tracker.startTracking();
     }
