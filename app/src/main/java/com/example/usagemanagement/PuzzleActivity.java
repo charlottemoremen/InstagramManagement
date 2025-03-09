@@ -1,6 +1,8 @@
 package com.example.usagemanagement;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.DisplayMetrics;
 import android.widget.Button;
 import android.widget.GridLayout;
@@ -30,6 +32,8 @@ public class PuzzleActivity extends AppCompatActivity {
     private List<Integer> remainingTilesToSelect = new ArrayList<>(); // Track tiles left to select
     private boolean gameInProgress = false;
     private boolean showingPattern = false;
+    private boolean localPuzzleSolved = false;
+    private float reentryShowTimeMs = 1500;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,32 +85,66 @@ public class PuzzleActivity extends AppCompatActivity {
         }
     }
 
+    private void completePuzzle() {
+        localPuzzleSolved = true;
+        gameInProgress = false;
+        instructionsText.setText("You got it!");
+
+        // clear puzzle pattern so next interval can create a new puzzle
+        getSharedPreferences("PuzzlePrefs", MODE_PRIVATE)
+                .edit()
+                .remove("currentPuzzlePattern")
+                .apply();
+
+        new android.os.Handler().postDelayed(() -> {
+            Intent resultIntent = new Intent();
+            resultIntent.putExtra("puzzleSolved", true);
+            setResult(RESULT_OK, resultIntent);
+            finish();
+        }, 1000);
+    }
+
     private void startPuzzleGame() {
         if (gameInProgress) return;
 
-        instructionsText.setText("Remember these tiles!");
-        resetTilesToDefault();
+        // check if a puzzle is already in progress
+        List<Integer> loadedPattern = loadPuzzlePattern();
+        boolean alreadyInProgress = loadedPattern != null && !loadedPattern.isEmpty();
 
-        // Generate new correct pattern
+        if (!alreadyInProgress) {
+            // no puzzle in progress => create a new one
+            generateNewPuzzlePattern();
+            savePuzzlePattern(); // store these tiles
+        } else {
+            // puzzle pattern already stored => load it
+            correctTiles.clear();
+            correctTiles.addAll(loadedPattern);
+        }
+
+        // now that correctTiles is set, set up remaining tiles
+        remainingTilesToSelect = new ArrayList<>(correctTiles);
+
+        // highlight the correct tiles first
+        instructionsText.setText("remember these tiles!");
+        resetTilesToDefault();
+        highlightCorrectTiles();
+
+        new android.os.Handler().postDelayed(() -> {
+            resetTilesToDefault();
+            instructionsText.setText("select the correct tiles!");
+            gameInProgress = true;
+        }, (long) showTimeMs);
+    }
+
+    private void generateNewPuzzlePattern() {
+        // generate a fresh 7-tile puzzle
         correctTiles.clear();
         List<Integer> allTiles = new ArrayList<>();
         for (int i = 0; i < TILE_COUNT; i++) {
             allTiles.add(i);
         }
         Collections.shuffle(allTiles);
-        correctTiles.addAll(allTiles.subList(0, TOTAL_TILES_TO_SELECT)); // Select 7 tiles
-
-        // Initialize remaining tiles to select
-        remainingTilesToSelect = new ArrayList<>(correctTiles);
-
-        // Highlight correct tiles
-        highlightCorrectTiles();
-
-        new android.os.Handler().postDelayed(() -> {
-            resetTilesToDefault();
-            instructionsText.setText("Select the correct tiles!");
-            gameInProgress = true;
-        }, (long) showTimeMs);
+        correctTiles.addAll(allTiles.subList(0, TOTAL_TILES_TO_SELECT));
     }
 
     private void onTileClicked(int tileIndex) {
@@ -124,6 +162,7 @@ public class PuzzleActivity extends AppCompatActivity {
                 instructionsText.setText("You got it!");
                 gameInProgress = false;
                 showTimeMs = 3000; // Reset show time for new game
+                completePuzzle();
             }
         } else {
             // Incorrect tile
@@ -168,5 +207,67 @@ public class PuzzleActivity extends AppCompatActivity {
             gameInProgress = true;
             showingPattern = false;
         }, (long) showTimeMs);
+    }
+
+    private void savePuzzlePattern() {
+        StringBuilder sb = new StringBuilder();
+        for (int tileIndex : correctTiles) {
+            sb.append(tileIndex).append(",");
+        }
+        getSharedPreferences("PuzzlePrefs", MODE_PRIVATE)
+                .edit()
+                .putString("currentPuzzlePattern", sb.toString())
+                .apply();
+    }
+
+    private List<Integer> loadPuzzlePattern() {
+        String pattern = getSharedPreferences("PuzzlePrefs", MODE_PRIVATE)
+                .getString("currentPuzzlePattern", "");
+        List<Integer> loadedTiles = new ArrayList<>();
+        if (!pattern.isEmpty()) {
+            for (String part : pattern.split(",")) {
+                if (!part.trim().isEmpty()) {
+                    loadedTiles.add(Integer.parseInt(part.trim()));
+                }
+            }
+        }
+        return loadedTiles;
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (!localPuzzleSolved) {
+            getSharedPreferences("PuzzlePrefs", MODE_PRIVATE)
+                    .edit()
+                    .putBoolean("puzzleAbandoned", true)
+                    .apply();
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (!localPuzzleSolved) {
+            instructionsText.setText("remember these tiles!");
+            highlightCorrectTiles();
+
+            new Handler().postDelayed(() -> {
+                resetTilesToDefault();
+                instructionsText.setText("select the correct tiles!");
+                gameInProgress = true;
+            }, (long) reentryShowTimeMs);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (!localPuzzleSolved) {
+            getSharedPreferences("PuzzlePrefs", MODE_PRIVATE)
+                    .edit()
+                    .putBoolean("puzzleActive", false)
+                    .apply();
+        }
     }
 }

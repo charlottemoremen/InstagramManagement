@@ -32,6 +32,18 @@
         android:textColor="#633B48"
         android:textSize="32sp" />
 
+
+    <TextView
+        android:id="@+id/IDText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:fontFamily="@font/inter"
+        android:text="A123"
+        android:textSize="18sp"
+        android:textColor="@color/deep_maroon"
+        />
+
     <TextView
         android:id="@+id/usageTitleText"
         android:layout_width="wrap_content"
@@ -54,27 +66,14 @@
         android:textColor="#633B48"
         android:textSize="16sp" />
 
-    <!-- Puzzle Button -->
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/puzzleButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:layout_marginBottom="16dp"
-        android:padding="16dp"
-        style="@style/RoundedButtonStyle"
-        android:text="Puzzle"
-        />
-
-    <!-- Greyscale Button -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/grayscaleButton"
+        android:id="@+id/reportButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:padding="16dp"
         style="@style/RoundedButtonStyle"
-        android:text="Greyscale" />
+        android:text="Generate Report" />
 
     <!-- Dynamic Spacer -->
     <Space

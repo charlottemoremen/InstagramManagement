@@ -91,8 +91,6 @@ public class MyAccessibilityService extends AccessibilityService {
         }
     }
 
-
-
     @Override
     public void onInterrupt() {
         Log.w(TAG, "Accessibility service interrupted.");
