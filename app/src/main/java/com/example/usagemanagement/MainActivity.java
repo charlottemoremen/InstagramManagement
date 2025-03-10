@@ -185,7 +185,7 @@ public class MainActivity extends AppCompatActivity
                     statusTextView.setText("No Instagram usage detected today");
                 }
             }
-            if (minutesUsed >= THRESHOLD && isInstagramActive) {
+            if (totalUsageMinutes >= THRESHOLD && isInstagramActive) {
                 if (condition == 'B' || condition == 'D') {
                     service.setGrayscaleEnabled(true);
                     Log.d(TAG, "GRAYSCALE APPLIED");
