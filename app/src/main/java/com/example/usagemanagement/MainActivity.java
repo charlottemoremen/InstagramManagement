@@ -39,8 +39,8 @@ public class MainActivity extends AppCompatActivity
     private Button reportButton;
     private boolean isGrayscaleEnabled = false;
     private InstagramUsageTracker tracker;
-    private static final long THRESHOLD = 2;
-    private static final long PUZZLE_PROMPT_INTERVAL = 3;
+    private static final long THRESHOLD = 60;
+    private static final long PUZZLE_PROMPT_INTERVAL = 15;
 
     private int lastSolvedPuzzleInterval = 0;
     private int pendingPuzzleInterval = 0;
@@ -60,8 +60,12 @@ public class MainActivity extends AppCompatActivity
         // D: grayscale AND puzzle
 
         if (participantID == null) {
-            // Assign a random condition
-            char[] conditions = {'A', 'B', 'C', 'D'};
+            // REAL condition assignment
+//            char[] conditions = {'A', 'B', 'C', 'D'};
+//            char assignedCondition = conditions[new Random().nextInt(conditions.length)];
+
+            //FOR BETA TESTING PURPOSES ONLY
+            char[] conditions = {'B', 'C', 'D'};
             char assignedCondition = conditions[new Random().nextInt(conditions.length)];
 
             // Generate a random 4-digit number
