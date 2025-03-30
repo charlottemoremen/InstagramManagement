@@ -1,4 +1,4 @@
-package com.example.usagemanagement;
+package com.moremen.screensaver;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -20,6 +20,7 @@ public class PuzzleActivity extends AppCompatActivity {
     private GridLayout puzzleGrid;
     private Button backButton;
     private TextView instructionsText;
+    private TextView explanationText;
 
     private final int GRID_SIZE = 5; // 5x5 grid
     private final int TILE_COUNT = GRID_SIZE * GRID_SIZE;
@@ -42,6 +43,7 @@ public class PuzzleActivity extends AppCompatActivity {
 
         puzzleGrid = findViewById(R.id.puzzleGrid);
         backButton = findViewById(R.id.backButton);
+        explanationText = findViewById(R.id.explanationText);
         instructionsText = findViewById(R.id.instructionsText);
 
         setupPuzzleGrid();

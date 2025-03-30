@@ -1,54 +1,47 @@
-package com.example.usagemanagement;
+package com.moremen.screensaver;
 
+import android.app.AppOpsManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.PowerManager;
 import android.provider.Settings;
 import android.util.Log;
-import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
 
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import android.app.AppOpsManager;
-import android.view.WindowManager;
-import android.widget.Toast;
-
-public class MainActivity extends AppCompatActivity
-        implements MyAccessibilityService.AccessibilityServiceConnectionListener {
+public class MainActivity extends AppCompatActivity implements MyAccessibilityService.AccessibilityServiceConnectionListener {
 
     private static final String TAG = "MainActivity";
+    private static final long THRESHOLD = 60;
+    private static final long PUZZLE_PROMPT_INTERVAL = 15;
+    private static final int PUZZLE_REQUEST_CODE = 1001;
+    private static final int POST_NOTIFICATIONS_REQUEST_CODE = 1010;
     private TextView statusTextView;
     private TextView usageTitleText;
     private TextView IDText;
     private Handler handler;
     private Button reportButton;
-    private boolean isGrayscaleEnabled = false;
+    private final boolean isGrayscaleEnabled = false;
     private InstagramUsageTracker tracker;
-    private static final long THRESHOLD = 60;
-    private static final long PUZZLE_PROMPT_INTERVAL = 15;
-
     private int lastSolvedPuzzleInterval = 0;
     private int pendingPuzzleInterval = 0;
     private boolean solvedPuzzle = true;
     private boolean puzzleLaunched = false;
-    private static final int PUZZLE_REQUEST_CODE = 1001;
     private ActivityResultLauncher<Intent> puzzleActivityLauncher;
-    private static final int POST_NOTIFICATIONS_REQUEST_CODE = 1010;
 
     private void assignCondition() {
         SharedPreferences prefs = getSharedPreferences("UserPrefs", MODE_PRIVATE);
@@ -65,8 +58,9 @@ public class MainActivity extends AppCompatActivity
 //            char assignedCondition = conditions[new Random().nextInt(conditions.length)];
 
             //FOR BETA TESTING PURPOSES ONLY
-            char[] conditions = {'B', 'C', 'D'};
-            char assignedCondition = conditions[new Random().nextInt(conditions.length)];
+//            char[] conditions = {'B', 'C', 'D'};
+//            char assignedCondition = conditions[new Random().nextInt(conditions.length)];
+            char assignedCondition = 'D';
 
             // Generate a random 4-digit number
             int randomID = 1000 + new Random().nextInt(9000);
@@ -98,31 +92,24 @@ public class MainActivity extends AppCompatActivity
 
         checkPermissionsInOrder();
 
-        puzzleActivityLauncher = registerForActivityResult(
-                new ActivityResultContracts.StartActivityForResult(),
-                result -> {
-                    if (result.getResultCode() == RESULT_OK && result.getData() != null &&
-                            result.getData().getBooleanExtra("puzzleSolved", false)) {
+        puzzleActivityLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+            if (result.getResultCode() == RESULT_OK && result.getData() != null && result.getData().getBooleanExtra("puzzleSolved", false)) {
 
-                        lastSolvedPuzzleInterval = pendingPuzzleInterval;
-                        solvedPuzzle = true;
-                        savePuzzleState(true);
-                        setPuzzleSessionActive(false);
-                        getSharedPreferences("PuzzlePrefs", MODE_PRIVATE)
-                                .edit()
-                                .remove("puzzleInProgressInterval")
-                                .apply();
-                        puzzleLaunched = false;
-                        Log.d(TAG, "Puzzle solved, allowing Instagram access.");
+                lastSolvedPuzzleInterval = pendingPuzzleInterval;
+                solvedPuzzle = true;
+                savePuzzleState(true);
+                setPuzzleSessionActive(false);
+                getSharedPreferences("PuzzlePrefs", MODE_PRIVATE).edit().remove("puzzleInProgressInterval").apply();
+                puzzleLaunched = false;
+                Log.d(TAG, "Puzzle solved, allowing Instagram access.");
 
-                    } else {
-                        // puzzle was NOT solved
-                        solvedPuzzle = false;
-                        savePuzzleState(false);
-                        Log.d(TAG, "Puzzle not solved; keeping redirection active.");
-                    }
-                }
-        );
+            } else {
+                // puzzle was NOT solved
+                solvedPuzzle = false;
+                savePuzzleState(false);
+                Log.d(TAG, "Puzzle not solved; keeping redirection active.");
+            }
+        });
 
         reportButton.setOnClickListener(v -> {
             UsageReportGenerator reportGenerator = new UsageReportGenerator(MainActivity.this);
@@ -159,20 +146,15 @@ public class MainActivity extends AppCompatActivity
                 timeString.append(secondsUsed).append(" sec");
             }
 
-            boolean puzzleAbandoned = getSharedPreferences("PuzzlePrefs", MODE_PRIVATE)
-                    .getBoolean("puzzleAbandoned", false);
+            boolean puzzleAbandoned = getSharedPreferences("PuzzlePrefs", MODE_PRIVATE).getBoolean("puzzleAbandoned", false);
 
             if (puzzleAbandoned) {
                 puzzleLaunched = false;
                 // reset the flag for future checks
-                getSharedPreferences("PuzzlePrefs", MODE_PRIVATE)
-                        .edit()
-                        .putBoolean("puzzleAbandoned", false)
-                        .apply();
+                getSharedPreferences("PuzzlePrefs", MODE_PRIVATE).edit().putBoolean("puzzleAbandoned", false).apply();
             }
 
-            String participantID = getSharedPreferences("UserPrefs", MODE_PRIVATE)
-                    .getString("ParticipantID", "");
+            String participantID = getSharedPreferences("UserPrefs", MODE_PRIVATE).getString("ParticipantID", "");
             char condition = participantID.charAt(0);
 
             MyAccessibilityService service = MyAccessibilityService.getInstance();
@@ -214,10 +196,7 @@ public class MainActivity extends AppCompatActivity
             savePuzzleState(false);
 
             // clear old puzzle pattern so puzzleActivity starts fresh
-            prefs.edit()
-                    .remove("currentPuzzlePattern")
-                    .putInt("puzzleInProgressInterval", currentPuzzleInterval)
-                    .apply();
+            prefs.edit().remove("currentPuzzlePattern").putInt("puzzleInProgressInterval", currentPuzzleInterval).apply();
 
             puzzleLaunched = true;
             setPuzzleSessionActive(true);
@@ -258,8 +237,7 @@ public class MainActivity extends AppCompatActivity
     private void checkPermissionsInOrder() {
         PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
         if (!pm.isIgnoringBatteryOptimizations(getPackageName())) {
-            Intent batteryIntent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                    Uri.parse("package:" + getPackageName()));
+            Intent batteryIntent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + getPackageName()));
             if (batteryIntent.resolveActivity(getPackageManager()) != null) {
                 startActivity(batteryIntent);
             } else {
@@ -269,28 +247,23 @@ public class MainActivity extends AppCompatActivity
 
         // 1) usage stats
         if (!isUsageStatsPermissionGranted()) {
-            notifyAndRedirect("You must grant package usage stats permission!",
-                    Settings.ACTION_USAGE_ACCESS_SETTINGS);
+            notifyAndRedirect("You must grant package usage stats permission!", Settings.ACTION_USAGE_ACCESS_SETTINGS);
         }
         // 2) overlay
         else if (!isSystemAlertWindowPermissionGranted()) {
-            notifyAndRedirect("You must grant system alert window permission!",
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
+            notifyAndRedirect("You must grant system alert window permission!", Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
         }
         // 3) accessibility
         else if (!isAccessibilityPermissionGranted()) {
-            notifyAndRedirect("You must grant accessibility permission!",
-                    Settings.ACTION_ACCESSIBILITY_SETTINGS);
-        }
-        else {
+            notifyAndRedirect("You must grant accessibility permission!", Settings.ACTION_ACCESSIBILITY_SETTINGS);
+        } else {
             Log.i(TAG, "All permissions are granted.");
         }
     }
 
     private boolean isUsageStatsPermissionGranted() {
         AppOpsManager appOps = (AppOpsManager) getSystemService(Context.APP_OPS_SERVICE);
-        int mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS,
-                android.os.Process.myUid(), getPackageName());
+        int mode = appOps.checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), getPackageName());
         return mode == AppOpsManager.MODE_ALLOWED;
     }
 
@@ -374,9 +347,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode,
-                                           @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
         if (requestCode == POST_NOTIFICATIONS_REQUEST_CODE) {
@@ -385,12 +356,10 @@ public class MainActivity extends AppCompatActivity
                 statusTextView.setText("All permissions are granted. Enjoy the app!");
             } else {
                 Log.w(TAG, "Post Notifications permission denied.");
-                // optionally inform user or proceed with partial functionality
             }
         }
     }
 
-    
     @Override
     public void onAccessibilityServiceConnected() {
         Log.i(TAG, "Accessibility service connection detected in MainActivity.");

@@ -1,4 +1,4 @@
-package com.example.usagemanagement;
+package com.moremen.screensaver;
 
 import android.accessibilityservice.AccessibilityService;
 import android.graphics.PixelFormat;
@@ -13,17 +13,10 @@ public class MyAccessibilityService extends AccessibilityService {
     private static final String INSTAGRAM_PACKAGE_NAME = "com.instagram.android";
     private static MyAccessibilityService instance;
     private static AccessibilityServiceConnectionListener listener;
-
-    private String currentActivePackageName = null;
     public boolean isGrayscaleEnabled = false;
+    private String currentActivePackageName = null;
     private View grayscaleOverlayView;
     private boolean isOverlayApplied = false;
-
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        instance = this;
-    }
 
     public static MyAccessibilityService getInstance() {
         return instance;
@@ -31,6 +24,12 @@ public class MyAccessibilityService extends AccessibilityService {
 
     public static void setAccessibilityServiceConnectionListener(AccessibilityServiceConnectionListener connectionListener) {
         listener = connectionListener;
+    }
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        instance = this;
     }
 
     @Override
@@ -64,13 +63,7 @@ public class MyAccessibilityService extends AccessibilityService {
             grayscaleOverlayView = new View(this);
             grayscaleOverlayView.setBackgroundColor(0x998A8FA0); // Semi-transparent grey
 
-            WindowManager.LayoutParams params = new WindowManager.LayoutParams(
-                    WindowManager.LayoutParams.MATCH_PARENT,
-                    WindowManager.LayoutParams.MATCH_PARENT,
-                    WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
-                    WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-                    PixelFormat.TRANSLUCENT
-            );
+            WindowManager.LayoutParams params = new WindowManager.LayoutParams(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE, PixelFormat.TRANSLUCENT);
 
             WindowManager windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
             windowManager.addView(grayscaleOverlayView, params);

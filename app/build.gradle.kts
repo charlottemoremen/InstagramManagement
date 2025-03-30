@@ -3,12 +3,12 @@ plugins {
 }
 
 android {
-    namespace = "com.example.usagemanagement"
+    namespace = "com.moremen.screensaver"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.usagemanagement"
-        minSdk = 26
+        applicationId = "com.moremen.screensaver"
+        minSdk = 30
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"

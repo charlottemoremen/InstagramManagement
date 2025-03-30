@@ -6,6 +6,18 @@
     android:padding="16dp"
     android:gravity="center_horizontal">
 
+    <TextView
+        android:id="@+id/explanationText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="5dp"
+        android:text="Solve the puzzle to open Instagram again!"
+        android:textSize="18sp"
+        android:textColor="@color/deep_maroon"
+        android:fontFamily="@font/inter" />
+
     <!-- Puzzle Grid -->
     <GridLayout
         android:id="@+id/puzzleGrid"
@@ -14,7 +26,7 @@
         android:layout_weight="1"
         android:clipToPadding="false"
         android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="8dp"
+        android:layout_marginBottom="20dp"
         android:layout_marginTop="20dp"
         />
 
@@ -39,6 +51,7 @@
         android:layout_gravity="center_horizontal"
         android:padding="12dp"
         android:layout_marginTop="8dp"
-        android:layout_marginBottom="275dp"
+        android:layout_marginBottom="200dp"
         style="@style/RoundedButtonStyle" />
+
 </LinearLayout>

@@ -1,5 +1,7 @@
-package com.example.usagemanagement;
+package com.moremen.screensaver;
 
+import android.app.ActivityManager;
+import android.app.ApplicationExitInfo;
 import android.app.usage.UsageEvents;
 import android.app.usage.UsageStats;
 import android.app.usage.UsageStatsManager;
@@ -10,20 +12,7 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
 
-import java.io.OutputStream;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Map;
-
 import com.itextpdf.text.Document;
-import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.Font;
 import com.itextpdf.text.FontFactory;
 import com.itextpdf.text.Paragraph;
@@ -31,8 +20,22 @@ import com.itextpdf.text.pdf.PdfPCell;
 import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
 
+import java.io.OutputStream;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
 public class UsageReportGenerator {
     private static final String TAG = "UsageReportGenerator";
+    private static final String MY_APP = "com.moremen.screensaver";
+    private static final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("MM-dd-yy hh:mm:ss a", Locale.getDefault());
     private final Context context;
 
     public UsageReportGenerator(Context context) {
@@ -40,24 +43,17 @@ public class UsageReportGenerator {
     }
 
     public void generateUsageReport() {
-        // define date range for usage
+        // date range: previous week (not including today)
         Calendar endCalendar = Calendar.getInstance();
-        endCalendar.add(Calendar.DAY_OF_YEAR, -1); // shift to "yesterday"
+        endCalendar.add(Calendar.DAY_OF_YEAR, -1); // shift to yesterday
         Date exactEnd = getEndOfDay((Calendar) endCalendar.clone());
 
         Calendar startCalendar = Calendar.getInstance();
         startCalendar.add(Calendar.DAY_OF_YEAR, -7);
         Date exactStart = getStartOfDay((Calendar) startCalendar.clone());
 
-        // 1) build the intro text
-        StringBuilder introBuilder = new StringBuilder();
-        introBuilder.append("——USAGE REPORT START——\n")
-                .append("today's date: ").append(formatDate(Calendar.getInstance().getTime())).append("\n")
-                .append("time zone on phone: ").append(Calendar.getInstance().getTimeZone().getID()).append("\n")
-                .append("date span: ").append(formatDate(exactStart)).append(" to ")
-                .append(formatDate(exactEnd)).append("\n\n");
-        // store final intro text
-        String introText = introBuilder.toString();
+        // 1) build intro text
+        String introText = "——USAGE REPORT START——\n" + "today's date: " + formatDate(Calendar.getInstance().getTime()) + "\n" + "time zone on phone: " + Calendar.getInstance().getTimeZone().getID() + "\n" + "date span: " + formatDate(exactStart) + " to " + formatDate(exactEnd) + "\n\n";
 
         // 2) gather usage data for the date span
         List<UsageStats> usageStatsList = queryUsageStats(exactStart, exactEnd);
@@ -71,17 +67,20 @@ public class UsageReportGenerator {
         String[][] tableData;
         if (top5Apps.isEmpty()) {
             // fallback single-cell table so pdf won't be empty
-            tableData = new String[][] { { "no usage data" } };
+            tableData = new String[][]{{"no usage data"}};
         } else {
             tableData = buildDailyTableData(top5Apps, exactStart, exactEnd);
         }
 
-        // 4) build the raw data text
+        // 4) build the kill event and raw data text
         StringBuilder rawBuilder = new StringBuilder();
+        String appDeathLog = logAppDeathEvents(context, exactStart.getTime(), exactEnd.getTime());
+        if (appDeathLog != null) {
+            rawBuilder.append(appDeathLog);
+        }
         rawBuilder.append("\n———RAW DATA———\n");
         appendRawData(rawBuilder, exactStart, exactEnd);
         rawBuilder.append("\n——USAGE REPORT END——\n");
-        // store final raw text
         String rawText = rawBuilder.toString();
 
         // 5) produce pdf with intro text at top, the table next, then raw data
@@ -103,24 +102,20 @@ public class UsageReportGenerator {
         for (Map.Entry<String, Long> entry : appUsageMap.entrySet()) {
             appUsages.add(new AppUsage(entry.getKey(), entry.getValue(), daysInRange));
         }
-
         return appUsages;
     }
 
-    // builds a day-by-day usage table with lines, stripping "com."
     private String[][] buildDailyTableData(List<AppUsage> topApps, Date start, Date end) {
         // (1) gather usage day by day
         Map<String, Map<String, Long>> dayAppUsage = new HashMap<>();
-
         Calendar cal = Calendar.getInstance();
         cal.setTime(start);
 
         while (!cal.getTime().after(end)) {
             Calendar dayStartCal = (Calendar) cal.clone();
-            Calendar dayEndCal   = (Calendar) cal.clone();
+            Calendar dayEndCal = (Calendar) cal.clone();
             Date dayStart = getStartOfDay(dayStartCal);
-            Date dayEnd   = getEndOfDay(dayEndCal);
-
+            Date dayEnd = getEndOfDay(dayEndCal);
             String dayStr = formatDate(dayStart);
 
             // retrieve usage events for this day
@@ -175,18 +170,14 @@ public class UsageReportGenerator {
             Map<String, Long> usageMap = dayAppUsage.get(dayStr);
             for (int i = 0; i < topApps.size(); i++) {
                 AppUsage app = topApps.get(i);
-                long ms = (usageMap != null)
-                        ? usageMap.getOrDefault(app.getPackageName(), 0L)
-                        : 0L;
+                long ms = (usageMap != null) ? usageMap.getOrDefault(app.getPackageName(), 0L) : 0L;
 
                 String fm = formatMinutesSeconds(ms);
                 row[i + 1] = fm;
 
-                grandTotals.put(app.getPackageName(),
-                        grandTotals.getOrDefault(app.getPackageName(), 0L) + ms);
+                grandTotals.put(app.getPackageName(), grandTotals.getOrDefault(app.getPackageName(), 0L) + ms);
             }
             rows.add(row);
-
             printCal.add(Calendar.DAY_OF_YEAR, 1);
         }
 
@@ -218,16 +209,12 @@ public class UsageReportGenerator {
         return tableData;
     }
 
-
-    // helper to strip "com." from the front
+    // helper to strip extraneous info from package names
     private String shortenPackageName(String packageName) {
         String shortName = packageName;
-
-        // remove all occurrences of "android"
         shortName = shortName.replace("com.", "");
         shortName = shortName.replace(".android", "");
-        shortName = shortName.replace("example.", "");
-
+        shortName = shortName.replace("moremen.", "");
         return shortName;
     }
 
@@ -261,8 +248,7 @@ public class UsageReportGenerator {
                 continue;
             }
 
-            // build a chronological list of (app, start, end, duration)
-            // by pairing ACTIVITY_RESUMED -> ACTIVITY_PAUSED
+            // build a chronological list of (app, start, end, duration) by pairing ACTIVITY_RESUMED -> ACTIVITY_PAUSED
             // 1) sort by timestamp
             usageEvents.sort(Comparator.comparingLong(e -> e.timestamp));
 
@@ -282,11 +268,7 @@ public class UsageReportGenerator {
                         if (dur > 0 && dur < 1000) {
                             dur = 1000;
                         }
-                        sessions.add(new SessionEntry(
-                                shortenPackageName(e.packageName),
-                                startTs,
-                                e.timestamp,
-                                dur));
+                        sessions.add(new SessionEntry(shortenPackageName(e.packageName), startTs, e.timestamp, dur));
                     }
                 }
             }
@@ -298,32 +280,22 @@ public class UsageReportGenerator {
                 continue;
             }
 
-            // sessions are already sorted by startTime, so just print them
+            // sessions are already sorted by startTime, so print
             for (SessionEntry s : sessions) {
-                report.append(s.appName).append(": ")
-                        .append(formatTimeRange(s.startTime, s.endTime))
-                        .append(" (")
-                        .append(formatDuration(s.durationMs))
-                        .append(")\n");
+                report.append(s.appName).append(": ").append(formatTimeRange(s.startTime, s.endTime)).append(" (").append(formatDuration(s.durationMs)).append(")\n");
             }
 
-            // now print a 2-col table of total daily usage by app
-            // accumulate usage in a map
+            //print a 2-col table of total daily usage by app
             Map<String, Long> dailyUsageMap = new HashMap<>();
             for (SessionEntry s : sessions) {
-                dailyUsageMap.put(
-                        s.appName,
-                        dailyUsageMap.getOrDefault(s.appName, 0L) + s.durationMs
-                );
+                dailyUsageMap.put(s.appName, dailyUsageMap.getOrDefault(s.appName, 0L) + s.durationMs);
             }
 
             report.append("\n App\t\t total daily time \n");
             for (Map.Entry<String, Long> entry : dailyUsageMap.entrySet()) {
                 String app = entry.getKey();
                 long totalMs = entry.getValue();
-                report.append(app).append(":\t\t")
-                        .append(formatMinutesSeconds(totalMs))
-                        .append("\n");
+                report.append(app).append(":\t\t").append(formatMinutesSeconds(totalMs)).append("\n");
             }
             report.append("\n");
 
@@ -347,19 +319,13 @@ public class UsageReportGenerator {
             UsageEvents.Event event = new UsageEvents.Event();
             while (events.hasNextEvent()) {
                 events.getNextEvent(event);
-                if (event != null && (event.getEventType() == UsageEvents.Event.ACTIVITY_RESUMED ||
-                        event.getEventType() == UsageEvents.Event.ACTIVITY_PAUSED)) {
+                if (event != null && (event.getEventType() == UsageEvents.Event.ACTIVITY_RESUMED || event.getEventType() == UsageEvents.Event.ACTIVITY_PAUSED)) {
                     usageEvents.add(new UsageEvent(event.getPackageName(), event.getTimeStamp(), event.getEventType()));
                 }
             }
         }
-
         return usageEvents;
     }
-
-    private static final SimpleDateFormat dateTimeFormat =
-            new SimpleDateFormat("MM-dd-yy hh:mm:ss a", Locale.getDefault());
-
 
     private List<UsageStats> queryUsageStats(Date start, Date end) {
         UsageStatsManager usageStatsManager = (UsageStatsManager) context.getSystemService(Context.USAGE_STATS_SERVICE);
@@ -368,8 +334,7 @@ public class UsageReportGenerator {
             return new ArrayList<>();
         }
 
-        return usageStatsManager.queryUsageStats(
-                UsageStatsManager.INTERVAL_DAILY, start.getTime(), end.getTime());
+        return usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, start.getTime(), end.getTime());
     }
 
     private Date getStartOfDay(Calendar calendar) {
@@ -398,16 +363,14 @@ public class UsageReportGenerator {
     }
 
     private void saveReportAsPdf(String introText, String[][] tableData, String rawText) {
-        String fileName = new SimpleDateFormat("MM-dd_HH:mm", Locale.getDefault())
-                .format(new Date()) + "_UsageReport.pdf";
+        String fileName = new SimpleDateFormat("MM-dd_HH:mm", Locale.getDefault()).format(new Date()) + "_UsageReport.pdf";
 
         ContentValues values = new ContentValues();
         values.put(MediaStore.Files.FileColumns.DISPLAY_NAME, fileName);
         values.put(MediaStore.Files.FileColumns.MIME_TYPE, "application/pdf");
         values.put(MediaStore.Files.FileColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
 
-        Uri uri = context.getContentResolver().insert(
-                MediaStore.Files.getContentUri("external"), values);
+        Uri uri = context.getContentResolver().insert(MediaStore.Files.getContentUri("external"), values);
 
         if (uri != null) {
             try (OutputStream os = context.getContentResolver().openOutputStream(uri)) {
@@ -432,8 +395,6 @@ public class UsageReportGenerator {
                     }
                     document.add(pdfTable);
                 }
-
-                // write raw data text last
                 document.add(new Paragraph(rawText, normalFont));
 
                 document.close();
@@ -446,17 +407,9 @@ public class UsageReportGenerator {
         }
     }
 
-
-    // optionally define a simple method to remove "com." and "android." across the entire content
-    private String stripPrefixes(String text) {
-        // naive replace all occurrences of "com." or "android."
-        return text.replace("com.", "")
-                .replace("android.", "");
-    }
-
     private String formatDuration(long durationMillis) {
         if (durationMillis < 0 || durationMillis > 24 * 60 * 60 * 1000) {
-            return "0 min 0 sec"; // Prevent extreme durations
+            return "timekeeping anomaly"; // Prevent extreme durations
         }
 
         long minutes = durationMillis / 60000;
@@ -471,12 +424,111 @@ public class UsageReportGenerator {
     }
 
     private String formatTimeRange(long start, long end) {
-        return dateTimeFormat.format(new Date(start)) + " - "
-                + dateTimeFormat.format(new Date(end));
+        return dateTimeFormat.format(new Date(start)) + " - " + dateTimeFormat.format(new Date(end));
     }
 
     private boolean isValidSession(long start, long end) {
         return start > 0 && end > 0 && end > start && (end - start) < (24 * 60 * 60 * 1000); // ensure durations < 1 day
+    }
+
+    private String logAppDeathEvents(Context context, long startTime, long endTime) {
+        ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        if (activityManager == null) return null;
+        StringBuilder logBuilder = new StringBuilder("——— SCREENSAVER KILL & RESTART EVENTS ———\n");
+
+        List<ApplicationExitInfo> exitInfoList = activityManager.getHistoricalProcessExitReasons(MY_APP, 0, Integer.MAX_VALUE);
+        if (exitInfoList.isEmpty()) {
+            logBuilder.append("No app death or restart events found.\n");
+            return logBuilder.toString();
+        }
+
+        // collect only kills within the date span
+        List<Long> killTimestamps = new ArrayList<>();
+        Map<Long, String> killReasonMap = new HashMap<>();
+        for (ApplicationExitInfo exitInfo : exitInfoList) {
+            long ts = exitInfo.getTimestamp();
+            if (ts >= startTime && ts <= endTime) {
+                killTimestamps.add(ts);
+                killReasonMap.put(ts, getExitReasonText(exitInfo.getReason()));
+            }
+        }
+
+        if (killTimestamps.isEmpty()) {
+            logBuilder.append("No kills found during date span.\n");
+            return logBuilder.toString();
+        } else {
+            Collections.sort(killTimestamps);
+        }
+
+        // load all ACTIVITY_RESUMED events in the span
+        UsageStatsManager usm = (UsageStatsManager) context.getSystemService(Context.USAGE_STATS_SERVICE);
+        List<UsageEvent> resumedEvents = new ArrayList<>();
+        if (usm != null) {
+            UsageEvents usageEvents = usm.queryEvents(startTime, endTime);
+            UsageEvents.Event event = new UsageEvents.Event();
+            while (usageEvents.hasNextEvent()) {
+                usageEvents.getNextEvent(event);
+                if (event != null && MY_APP.equals(event.getPackageName()) && event.getEventType() == UsageEvents.Event.ACTIVITY_RESUMED) {
+                    resumedEvents.add(new UsageEvent(event.getPackageName(), event.getTimeStamp(), event.getEventType()));
+                }
+            }
+        }
+
+        // match each kill to the next resumed event
+        for (long killTs : killTimestamps) {
+            String killTimeStr = formatTime(killTs);
+            String reason = killReasonMap.getOrDefault(killTs, "Unknown");
+            String restartStr = "";
+            for (UsageEvent e : resumedEvents) {
+                if (e.timestamp > killTs) {
+                    restartStr = formatTime(e.timestamp);
+                    break;
+                }
+            }
+            if (!restartStr.isEmpty()) {
+                logBuilder.append("ScreenSaver killed at ").append(killTimeStr).append(" (").append(reason).append("), restarted at ").append(restartStr).append("\n");
+            } else {
+                logBuilder.append("ScreenSaver killed at ").append(killTimeStr).append(" (").append(reason).append("), no restart detected in span\n");
+            }
+        }
+        return logBuilder.toString();
+    }
+
+    // Convert reason codes to human-readable text
+    private String getExitReasonText(int reason) {
+        switch (reason) {
+            case ApplicationExitInfo.REASON_ANR:
+                return "ANR (App Not Responding)";
+            case ApplicationExitInfo.REASON_CRASH:
+                return "Crash";
+            case ApplicationExitInfo.REASON_CRASH_NATIVE:
+                return "Native Crash";
+            case ApplicationExitInfo.REASON_DEPENDENCY_DIED:
+                return "Dependency Process Died";
+            case ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE:
+                return "Excessive Resource Usage";
+            case ApplicationExitInfo.REASON_EXIT_SELF:
+                return "Exited Normally";
+            case ApplicationExitInfo.REASON_FREEZER:
+                return "Background Freezing (Low Memory)";
+            case ApplicationExitInfo.REASON_INITIALIZATION_FAILURE:
+                return "Initialization Failure";
+            case ApplicationExitInfo.REASON_LOW_MEMORY:
+                return "Low Memory Kill";
+            case ApplicationExitInfo.REASON_OTHER:
+                return "Other";
+            case ApplicationExitInfo.REASON_PERMISSION_CHANGE:
+                return "Permissions Changed";
+            case ApplicationExitInfo.REASON_SIGNALED:
+                return "Killed by Signal";
+            case ApplicationExitInfo.REASON_UNKNOWN:
+            default:
+                return "Unknown";
+        }
+    }
+
+    private String formatTime(long timestamp) {
+        return new SimpleDateFormat("MM/dd/yy hh:mm a", Locale.getDefault()).format(new Date(timestamp));
     }
 
     private static class SessionEntry {
@@ -504,6 +556,7 @@ public class UsageReportGenerator {
             this.eventType = eventType;
         }
     }
+
     private static class AppUsage {
         private final String packageName;
         private final long totalUsage;
@@ -521,10 +574,6 @@ public class UsageReportGenerator {
 
         public long getTotalUsage() {
             return totalUsage;
-        }
-
-        public long getDailyAverage() {
-            return totalUsage / daysInRange;
         }
     }
 }

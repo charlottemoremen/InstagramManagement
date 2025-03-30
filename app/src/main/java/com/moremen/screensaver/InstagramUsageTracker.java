@@ -1,16 +1,12 @@
-package com.example.usagemanagement;
+package com.moremen.screensaver;
 
 import android.app.usage.UsageEvents;
-import android.app.usage.UsageStats;
 import android.app.usage.UsageStatsManager;
 import android.content.Context;
 import android.os.Handler;
 import android.util.Log;
 
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Date;
-import java.util.Locale;
 
 public class InstagramUsageTracker {
 

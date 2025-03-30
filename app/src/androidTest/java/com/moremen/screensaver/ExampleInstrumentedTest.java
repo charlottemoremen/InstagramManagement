@@ -1,4 +1,4 @@
-package com.example.usagemanagement;
+package com.moremen.screensaver;
 
 import android.content.Context;
 

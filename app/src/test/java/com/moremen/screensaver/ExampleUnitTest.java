@@ -1,4 +1,4 @@
-package com.example.usagemanagement;
+package com.moremen.screensaver;
 
 import org.junit.Test;
 

@@ -28,7 +28,7 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="24dp"
         android:fontFamily="@font/abrilfatface"
-        android:text="Screen Saver"
+        android:text="ScreenSaver"
         android:textColor="#633B48"
         android:textSize="32sp" />
 
@@ -49,7 +49,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:text="today's Instagram time:"
+        android:text="Today's Instagram time:"
         android:textSize="18sp"
         android:textColor="@color/deep_maroon"
         android:fontFamily="@font/inter"
@@ -62,7 +62,7 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="24dp"
         android:fontFamily="@font/inter"
-        android:text="Today's Instagram Usage: 0 min 0 sec"
+        android:text="calculating..."
         android:textColor="#633B48"
         android:textSize="16sp" />
 
@@ -74,6 +74,7 @@
         android:padding="16dp"
         style="@style/RoundedButtonStyle"
         android:text="Generate Report" />
+
 
     <!-- Dynamic Spacer -->
     <Space
