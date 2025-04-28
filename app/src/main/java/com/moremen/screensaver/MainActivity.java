@@ -54,13 +54,13 @@ public class MainActivity extends AppCompatActivity implements MyAccessibilitySe
 
         if (participantID == null) {
             // REAL condition assignment
-//            char[] conditions = {'A', 'B', 'C', 'D'};
-//            char assignedCondition = conditions[new Random().nextInt(conditions.length)];
+            char[] conditions = {'A', 'B', 'C', 'D'};
+            char assignedCondition = conditions[new Random().nextInt(conditions.length)];
 
             //FOR BETA TESTING PURPOSES ONLY
 //            char[] conditions = {'B', 'C', 'D'};
 //            char assignedCondition = conditions[new Random().nextInt(conditions.length)];
-            char assignedCondition = 'D';
+//            char assignedCondition = 'D';
 
             // Generate a random 4-digit number
             int randomID = 1000 + new Random().nextInt(9000);

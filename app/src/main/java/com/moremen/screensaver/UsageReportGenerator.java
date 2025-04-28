@@ -7,6 +7,7 @@ import android.app.usage.UsageStats;
 import android.app.usage.UsageStatsManager;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -36,7 +37,7 @@ public class UsageReportGenerator {
     private static final String TAG = "UsageReportGenerator";
     private static final String MY_APP = "com.moremen.screensaver";
     private static final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("MM-dd-yy hh:mm:ss a", Locale.getDefault());
-    private final Context context;
+    private Context context;
 
     public UsageReportGenerator(Context context) {
         this.context = context;
@@ -52,8 +53,15 @@ public class UsageReportGenerator {
         startCalendar.add(Calendar.DAY_OF_YEAR, -7);
         Date exactStart = getStartOfDay((Calendar) startCalendar.clone());
 
+        SharedPreferences prefs = context.getSharedPreferences("UserPrefs", Context.MODE_PRIVATE);
+        String participantID = prefs.getString("ParticipantID", "Unknown");
+
         // 1) build intro text
-        String introText = "——USAGE REPORT START——\n" + "today's date: " + formatDate(Calendar.getInstance().getTime()) + "\n" + "time zone on phone: " + Calendar.getInstance().getTimeZone().getID() + "\n" + "date span: " + formatDate(exactStart) + " to " + formatDate(exactEnd) + "\n\n";
+        String introText = "——USAGE REPORT START——\n"
+                + "Participant ID: " + participantID +"\n"
+                + "today's date: " + formatDate(Calendar.getInstance().getTime()) + "\n"
+                + "time zone on phone: " + Calendar.getInstance().getTimeZone().getID() + "\n"
+                + "date span: " + formatDate(exactStart) + " to " + formatDate(exactEnd) + "\n\n";
 
         // 2) gather usage data for the date span
         List<UsageStats> usageStatsList = queryUsageStats(exactStart, exactEnd);
