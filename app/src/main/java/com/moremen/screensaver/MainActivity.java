@@ -1,11 +1,14 @@
 package com.moremen.screensaver;
 
 import android.app.AppOpsManager;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.PowerManager;
@@ -19,9 +22,17 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
+
+import android.app.AlarmManager;
+import android.app.PendingIntent;
+import android.content.Intent;
+import android.content.Context;
+import java.util.Calendar;
 
 public class MainActivity extends AppCompatActivity implements MyAccessibilityService.AccessibilityServiceConnectionListener {
 
@@ -33,6 +44,7 @@ public class MainActivity extends AppCompatActivity implements MyAccessibilitySe
     private TextView statusTextView;
     private TextView usageTitleText;
     private TextView IDText;
+    private TextView explainerText;
     private Handler handler;
     private Button reportButton;
     private final boolean isGrayscaleEnabled = false;
@@ -70,7 +82,7 @@ public class MainActivity extends AppCompatActivity implements MyAccessibilitySe
             prefs.edit().putString("ParticipantID", participantID).apply();
         }
         // Display the assigned participant ID
-        IDText.setText("Your participant number is " + participantID);
+        IDText.setText("Your participant ID is " + participantID);
     }
 
     @Override
@@ -78,12 +90,22 @@ public class MainActivity extends AppCompatActivity implements MyAccessibilitySe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         handler = new Handler();
+        NotificationChannel channel = new NotificationChannel(
+                "reminder_channel",
+                "Daily Reminders",
+                NotificationManager.IMPORTANCE_HIGH
+        );
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        if (manager != null) {
+            manager.createNotificationChannel(channel);
+        }
 
         // Correctly initialize UI elements
         usageTitleText = findViewById(R.id.usageTitleText);
         statusTextView = findViewById(R.id.IGTrackingText);
         IDText = findViewById(R.id.IDText);
         reportButton = findViewById(R.id.reportButton);
+        explainerText = findViewById(R.id.explainerText);
 
         if (statusTextView == null) {
             Log.e(TAG, "UI elements are null. Check your layout XML.");
@@ -183,6 +205,7 @@ public class MainActivity extends AppCompatActivity implements MyAccessibilitySe
             }
         }));
         tracker.startTracking();
+        scheduleReminderAlarms();
     }
 
     private void handlePuzzleLogic(int currentPuzzleInterval) {
@@ -207,7 +230,7 @@ public class MainActivity extends AppCompatActivity implements MyAccessibilitySe
         } else if (!solvedPuzzle && !puzzleLaunched) {
             if (puzzleInProgressInterval == currentPuzzleInterval) {
                 Log.d(TAG, "Puzzle for this interval is not solved yet, forcing puzzle again.");
-                forcePuzzleCompletion(); // but this won't generate a brand-new puzzle pattern
+                forcePuzzleCompletion(); // this won't generate a brand-new puzzle pattern
             } else {
                 // fallback in case puzzleInProgressInterval got cleared incorrectly
                 forcePuzzleCompletion();
@@ -250,13 +273,23 @@ public class MainActivity extends AppCompatActivity implements MyAccessibilitySe
             notifyAndRedirect("You must grant package usage stats permission!", Settings.ACTION_USAGE_ACCESS_SETTINGS);
         }
         // 2) overlay
-        else if (!isSystemAlertWindowPermissionGranted()) {
+         if (!isSystemAlertWindowPermissionGranted()) {
             notifyAndRedirect("You must grant system alert window permission!", Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
         }
         // 3) accessibility
-        else if (!isAccessibilityPermissionGranted()) {
+         if (!isAccessibilityPermissionGranted()) {
             notifyAndRedirect("You must grant accessibility permission!", Settings.ACTION_ACCESSIBILITY_SETTINGS);
-        } else {
+        }
+
+        // 4) notifications (Android 13+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{android.Manifest.permission.POST_NOTIFICATIONS},
+                    1001);
+        }
+
+        else {
             Log.i(TAG, "All permissions are granted.");
         }
     }
@@ -366,4 +399,32 @@ public class MainActivity extends AppCompatActivity implements MyAccessibilitySe
         statusTextView.setText("Tracking Instagram usage...");
     }
 
+    public void scheduleReminderAlarms() {
+        scheduleAlarmForTime(9, 30);   // 9:30 AM
+        scheduleAlarmForTime(21, 30);  // 9:30 PM
+    }
+
+    private void scheduleAlarmForTime(int hour, int minute) {
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        Intent intent = new Intent(this, ReminderReceiver.class);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                this, hour * 100 + minute, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.HOUR_OF_DAY, hour);
+        calendar.set(Calendar.MINUTE, minute);
+        calendar.set(Calendar.SECOND, 0);
+
+        if (calendar.getTimeInMillis() < System.currentTimeMillis()) {
+            calendar.add(Calendar.DAY_OF_YEAR, 1); // Set for next day if time has already passed
+        }
+
+        alarmManager.setRepeating(
+                AlarmManager.RTC_WAKEUP,
+                calendar.getTimeInMillis(),
+                AlarmManager.INTERVAL_DAY,
+                pendingIntent
+        );
+    }
 }
