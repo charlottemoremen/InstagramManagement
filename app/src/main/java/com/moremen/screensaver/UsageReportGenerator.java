@@ -9,6 +9,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
@@ -56,12 +57,28 @@ public class UsageReportGenerator {
         SharedPreferences prefs = context.getSharedPreferences("UserPrefs", Context.MODE_PRIVATE);
         String participantID = prefs.getString("ParticipantID", "Unknown");
 
+        //pull memory information
+        ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
+        activityManager.getMemoryInfo(mi);
+
+        //pull device info
+        String deviceBrand = Build.BRAND;
+        String deviceModel = Build.MODEL;
+        String deviceMan = Build.MANUFACTURER;
+
         // 1) build intro text
         String introText = "——USAGE REPORT START——\n"
                 + "Participant ID: " + participantID +"\n"
                 + "today's date: " + formatDate(Calendar.getInstance().getTime()) + "\n"
                 + "time zone on phone: " + Calendar.getInstance().getTimeZone().getID() + "\n"
-                + "date span: " + formatDate(exactStart) + " to " + formatDate(exactEnd) + "\n\n";
+                + "date span: " + formatDate(exactStart) + " to " + formatDate(exactEnd) + "\n\n"
+                + "available memory: " + mi.availMem + "\n"
+                + "memory threshold: " + mi.threshold + "\n"
+                + "low memory? : " + mi.lowMemory + "\n\n"
+                + "Brand: " + deviceBrand + "\n"
+                + "Model: " + deviceModel + "\n"
+                + "Manufacturer: " + deviceMan + "\n\n";
 
         // 2) gather usage data for the date span
         List<UsageStats> usageStatsList = queryUsageStats(exactStart, exactEnd);

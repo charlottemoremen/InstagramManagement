@@ -37,7 +37,7 @@ import java.util.Calendar;
 public class MainActivity extends AppCompatActivity implements MyAccessibilityService.AccessibilityServiceConnectionListener {
 
     private static final String TAG = "MainActivity";
-    private static final long THRESHOLD = 60;
+    private static final long THRESHOLD = 30;
     private static final long PUZZLE_PROMPT_INTERVAL = 15;
     private static final int PUZZLE_REQUEST_CODE = 1001;
     private static final int POST_NOTIFICATIONS_REQUEST_CODE = 1010;
@@ -400,8 +400,8 @@ public class MainActivity extends AppCompatActivity implements MyAccessibilitySe
     }
 
     public void scheduleReminderAlarms() {
-        scheduleAlarmForTime(9, 30);   // 9:30 AM
-        scheduleAlarmForTime(21, 30);  // 9:30 PM
+        scheduleAlarmForTime(12, 0);   // Noon
+       // scheduleAlarmForTime(21, 30);  // 9:30 PM
     }
 
     private void scheduleAlarmForTime(int hour, int minute) {
